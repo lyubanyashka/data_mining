@@ -3,6 +3,7 @@ from nltk.corpus import stopwords
 import pymorphy2
 import nltk
 from datetime import datetime
+from datetime import timedelta
 
 # nltk.download()
 # nltk.download('stopwords')
@@ -27,6 +28,7 @@ class Tweet:
         self.normalized_words = []
         self.date = datetime.today()
         self.estimation = [0, 0, 0]
+        self.rule1_estimation = 0
 
 
 class TwitterAnalyzer:
@@ -63,6 +65,7 @@ class TwitterAnalyzer:
         rules_res = ""
         rules_res += self.rule1_estimate()
         rules_res += self.rule2_estimate()
+        self.date_analyze()
         f = open("classifications.txt", "w+")
         f.write(rules_res)
         f.close()
@@ -71,8 +74,8 @@ class TwitterAnalyzer:
         rule_res = "Rule1 name\n"
 
         all_tweets_estimation = [0, 0, 0]
-        for tweet in self.tweets:
-            estimation = tweet.estimation
+        for idx in range(len(self.tweets)):
+            estimation = self.tweets[idx].estimation
             res = neutral_idx
             total_estimation = estimation[positive_idx] - estimation[negative_idx]
             if total_estimation < t_low:
@@ -80,6 +83,7 @@ class TwitterAnalyzer:
             if total_estimation > t_up:
                 res = positive_idx
             all_tweets_estimation[res] += 1
+            self.tweets[idx].rule1_estimation = res - 1
         size = len(self.tweets)
         rule_res += "Good - {} - {}%\n".format(all_tweets_estimation[positive_idx],
                                                100 * all_tweets_estimation[positive_idx] / size)
@@ -93,12 +97,12 @@ class TwitterAnalyzer:
         rule_res = "Rule2 name\n"
 
         all_tweets_estimation = [0, 0, 0]
-        for tweet in self.tweets:
+        for idx in range(len(self.tweets)):
             res_idx = neutral_idx
-            tweet.estimation[res_idx] = tweet.estimation[res_idx] * 0.15
-            if tweet.estimation[res_idx] < tweet.estimation[positive_idx]:
+            self.tweets[idx].estimation[res_idx] = self.tweets[idx].estimation[res_idx] * 0.15
+            if self.tweets[idx].estimation[res_idx] < self.tweets[idx].estimation[positive_idx]:
                 res_idx = positive_idx
-            if tweet.estimation[res_idx] < tweet.estimation[negative_idx]:
+            if self.tweets[idx].estimation[res_idx] < self.tweets[idx].estimation[negative_idx]:
                 res_idx = negative_idx
             all_tweets_estimation[res_idx] += 1
         size = len(self.tweets)
@@ -112,11 +116,12 @@ class TwitterAnalyzer:
 
     def general_tweet_estimate(self):
         self.get_estimation()
-        for tweet in self.tweets:
+        for idx in range(len(self.tweets)):
             estimations_counter = [0, 0, 0]
-            for word in tweet.normalized_words:
+            for word in self.tweets[idx].normalized_words:
                 estimation_index = self.word_to_estimation.get(word, 0) + 1
                 estimations_counter[estimation_index] += 1
+            self.tweets[idx].estimation = estimations_counter
 
     def save_word_estimation(self):
         f = open(estimation_file_name, "w+")
@@ -178,10 +183,26 @@ class TwitterAnalyzer:
         self.printAdjective(f, top5_negative_adj, "Top-5 Negative:\n")
         f.close()
 
+    # 16:30 – 17:10 : 110 0.55/0.25/0.2
     def date_analyze(self):
-        self.tweets = sorted(self.tweets, lambda x: x.date, reverse=True)
-        upper_date = self.tweets[0] + datetime.timedelta(minutes=30)
+        self.tweets.sort(key=lambda x: x.date, reverse=False)
+        upper_date = self.tweets[0].date + timedelta(minutes=30)
+        lower_date = upper_date - timedelta(minutes=30)
         bucket_estimates = [0, 0, 0]
+        date_format = "%d %H:%M"
+        result_str = ""
+        for tweet in self.tweets:
+            if tweet.date > upper_date:
+                total = bucket_estimates[0] + bucket_estimates[1] + bucket_estimates[2]
+                result_str += "{} - {} : {} {:.2}/{:.2}/{:.2}\n".format(lower_date.strftime(date_format), upper_date.strftime(date_format),
+                            total, bucket_estimates[positive_idx] / total, bucket_estimates[neutral_idx] / total, bucket_estimates[negative_idx] / total)
+                upper_date += timedelta(minutes=10)
+                continue
+            bucket_estimates[tweet.rule1_estimation + 1] += 1
+        f = open("hours.txt", "w+")
+        f.write(result_str)
+        f.close()
+
 
 
     def frequency_analysis(self):
@@ -208,10 +229,11 @@ class TwitterAnalyzer:
             tweet = Tweet()
             tweet.normalized_words = line
             tweet.date = datetime_object
+            self.tweets.append(tweet)
 
         tweets_len_to_count = dict()
         for tweet in self.tweets:
-            tweet_len = len(tweet)
+            tweet_len = len(tweet.normalized_words)
             tweets_len_to_count[tweet_len] = tweets_len_to_count.get(tweet_len, 0) + 1
             tweet_words_set = set(tweet.normalized_words)
             for word in tweet_words_set:

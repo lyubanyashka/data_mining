@@ -51,7 +51,6 @@ class TwitterAnalyzer:
     def do(self):
         self.frequency_analysis()
         self.save_word_frequency()
-        self.save_tweets_length()
         # self.save_word_estimation()
         self.general_tweet_estimate()
         self.top5_adj()
@@ -88,7 +87,7 @@ class TwitterAnalyzer:
 
         all_tweets_estimation = [0, 0, 0]
         for _, estimation in self.tweet_to_estimation.items():
-            res = neutral_idx
+            res = neutral_idx * 0.15
             if estimation[res] < estimation[positive_idx]:
                 res = positive_idx
             if estimation[res] < estimation[negative_idx]:
@@ -108,8 +107,8 @@ class TwitterAnalyzer:
         for tweet in self.tweets:
             estimations_counter = [0, 0, 0]
             for word in tweet:
-                estimation = self.word_to_estimation.get(word, 0) + 1
-                estimations_counter[estimation] += 1
+                estimation_index = self.word_to_estimation.get(word, 0) + 1
+                estimations_counter[estimation_index] += 1
             self.tweet_to_estimation[' '.join(tweet)] = estimations_counter
 
     def save_word_estimation(self):
@@ -196,7 +195,8 @@ class TwitterAnalyzer:
             tweet_words_set = set(tweet)
             for word in tweet_words_set:
                 self.word_to_count[word] = self.word_to_count.get(word, 0) + 1
-        self.sorted_word_count_pair = sorted(self.word_to_count.items(), key=operator.itemgetter(1), reverse=True)
+        self.save_tweets_length(tweets_len_to_count)
+        self.sorted_word_count_pair = sorted(self.word_to_count.items(), key=operator.itemgetter(1), reverse=True) # ключом сортировки является значение
 
 
 def main():

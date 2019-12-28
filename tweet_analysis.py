@@ -87,12 +87,13 @@ class TwitterAnalyzer:
 
         all_tweets_estimation = [0, 0, 0]
         for _, estimation in self.tweet_to_estimation.items():
-            res = neutral_idx * 0.15
-            if estimation[res] < estimation[positive_idx]:
-                res = positive_idx
-            if estimation[res] < estimation[negative_idx]:
-                res = negative_idx
-            all_tweets_estimation[res] += 1
+            res_idx = neutral_idx
+            estimation[res_idx] = estimation[res_idx] * 0.15
+            if estimation[res_idx] < estimation[positive_idx]:
+                res_idx = positive_idx
+            if estimation[res_idx] < estimation[negative_idx]:
+                res_idx = negative_idx
+            all_tweets_estimation[res_idx] += 1
         size = len(self.tweet_to_estimation)
         rule_res += "Good - {} - {}%\n".format(all_tweets_estimation[positive_idx],
                                                100 * all_tweets_estimation[positive_idx] / size)

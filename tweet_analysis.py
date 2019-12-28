@@ -4,8 +4,8 @@ import pymorphy2
 import nltk
 from datetime import datetime
 
-#nltk.download()
-#nltk.download('stopwords')
+# nltk.download()
+# nltk.download('stopwords')
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -21,11 +21,13 @@ negative_idx = 0
 neutral_idx = 1
 positive_idx = 2
 
+
 class Tweet:
     def __init__(self):
         self.normalized_words = []
         self.date = datetime.today()
         self.estimation = [0, 0, 0]
+
 
 class TwitterAnalyzer:
     def __init__(self):
@@ -179,6 +181,8 @@ class TwitterAnalyzer:
     def date_analyze(self):
         self.tweets = sorted(self.tweets, lambda x: x.date, reverse=True)
         upper_date = self.tweets[0] + datetime.timedelta(minutes=30)
+        bucket_estimates = [0, 0, 0]
+
 
     def frequency_analysis(self):
         text = self.data
@@ -213,7 +217,8 @@ class TwitterAnalyzer:
             for word in tweet_words_set:
                 self.word_to_count[word] = self.word_to_count.get(word, 0) + 1
         self.save_tweets_length(tweets_len_to_count)
-        self.sorted_word_count_pair = sorted(self.word_to_count.items(), key=operator.itemgetter(1), reverse=True) # ключом сортировки является значение
+        self.sorted_word_count_pair = sorted(self.word_to_count.items(), key=operator.itemgetter(1),
+                                             reverse=True)  # ключом сортировки является значение
 
 
 def main():

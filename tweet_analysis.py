@@ -2,6 +2,7 @@ import operator
 from nltk.corpus import stopwords
 import pymorphy2
 import nltk
+from datetime import datetime
 
 #nltk.download()
 #nltk.download('stopwords')
@@ -20,6 +21,10 @@ negative_idx = 0
 neutral_idx = 1
 positive_idx = 2
 
+class Tweet:
+    def __init__(self):
+        self.normalized_words = []
+        self.date = datetime.today()
 
 class TwitterAnalyzer:
     def __init__(self):
@@ -30,7 +35,7 @@ class TwitterAnalyzer:
         self.stop_words = set(self.stop_words)
 
         self.word_to_count = dict()
-        data_file = open("data.txt", "r")
+        data_file = open("data.txt", "r", encoding='utf-8-sig')
         self.data = data_file.read()
         self.sorted_word_count_pair = []
         self.tweets = []
@@ -107,10 +112,10 @@ class TwitterAnalyzer:
         self.get_estimation()
         for tweet in self.tweets:
             estimations_counter = [0, 0, 0]
-            for word in tweet:
+            for word in tweet.normalized_words:
                 estimation_index = self.word_to_estimation.get(word, 0) + 1
                 estimations_counter[estimation_index] += 1
-            self.tweet_to_estimation[' '.join(tweet)] = estimations_counter
+            self.tweet_to_estimation[' '.join(tweet.normalized_words)] = estimations_counter
 
     def save_word_estimation(self):
         f = open(estimation_file_name, "w+")
@@ -172,28 +177,40 @@ class TwitterAnalyzer:
         self.printAdjective(f, top5_negative_adj, "Top-5 Negative:\n")
         f.close()
 
+    def date_analyze(self):
+        self.tweets = sorted(self.tweets, lambda x: x.date, reverse=True)
+        upper_date = self.tweets[0] + datetime.timedelta(minutes=30)
+
     def frequency_analysis(self):
         text = self.data
         text = text.lower().replace("\n\n", "\n")
-        text = ''.join([i for i in text if filter_chars(i)])
+
         cache = dict()
-        self.tweets = text.splitlines()
-        for idx in range(len(self.tweets)):
-            self.tweets[idx] = nltk.word_tokenize(self.tweets[idx], 'russian')
-            self.tweets[idx] = [word for word in self.tweets[idx] if not word.startswith('http')]
-            self.tweets[idx] = [word for word in self.tweets[idx] if word not in self.stop_words]
+        lines = text.splitlines()
+        for line in lines:
+            datetime_str = line.split()[0] + " " + line.split()[1]
+            # 2018-07-11 01:26
+            datetime_object = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
+
+            line = ''.join([i for i in line if filter_chars(i)])
+            line = nltk.word_tokenize(line, 'russian')
+            line = [word for word in line if not word.startswith('http')]
+            line = [word for word in line if word not in self.stop_words]
             normalized_words = []
-            for word in self.tweets[idx]:
+            for word in line:
                 if word not in cache:
                     cache[word] = morph.parse(word)[0].normal_form
                 normalized_words.append(cache[word])
-            self.tweets[idx] = normalized_words
+            line = normalized_words
+            tweet = Tweet()
+            tweet.normalized_words = line
+            tweet.date = datetime_object
 
         tweets_len_to_count = dict()
         for tweet in self.tweets:
             tweet_len = len(tweet)
             tweets_len_to_count[tweet_len] = tweets_len_to_count.get(tweet_len, 0) + 1
-            tweet_words_set = set(tweet)
+            tweet_words_set = set(tweet.normalized_words)
             for word in tweet_words_set:
                 self.word_to_count[word] = self.word_to_count.get(word, 0) + 1
         self.save_tweets_length(tweets_len_to_count)

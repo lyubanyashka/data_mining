@@ -25,6 +25,7 @@ class Tweet:
     def __init__(self):
         self.normalized_words = []
         self.date = datetime.today()
+        self.estimation = [0, 0, 0]
 
 class TwitterAnalyzer:
     def __init__(self):
@@ -39,8 +40,6 @@ class TwitterAnalyzer:
         self.data = data_file.read()
         self.sorted_word_count_pair = []
         self.tweets = []
-
-        self.tweet_to_estimation = dict()
         self.word_to_estimation = dict()
 
     def get_estimation(self):
@@ -70,7 +69,8 @@ class TwitterAnalyzer:
         rule_res = "Rule1 name\n"
 
         all_tweets_estimation = [0, 0, 0]
-        for _, estimation in self.tweet_to_estimation.items():
+        for tweet in self.tweets:
+            estimation = tweet.estimation
             res = neutral_idx
             total_estimation = estimation[positive_idx] - estimation[negative_idx]
             if total_estimation < t_low:
@@ -78,7 +78,7 @@ class TwitterAnalyzer:
             if total_estimation > t_up:
                 res = positive_idx
             all_tweets_estimation[res] += 1
-        size = len(self.tweet_to_estimation)
+        size = len(self.tweets)
         rule_res += "Good - {} - {}%\n".format(all_tweets_estimation[positive_idx],
                                                100 * all_tweets_estimation[positive_idx] / size)
         rule_res += "Bad - {} - {}%\n".format(all_tweets_estimation[negative_idx],
@@ -91,15 +91,15 @@ class TwitterAnalyzer:
         rule_res = "Rule2 name\n"
 
         all_tweets_estimation = [0, 0, 0]
-        for _, estimation in self.tweet_to_estimation.items():
+        for tweet in self.tweets:
             res_idx = neutral_idx
-            estimation[res_idx] = estimation[res_idx] * 0.15
-            if estimation[res_idx] < estimation[positive_idx]:
+            tweet.estimation[res_idx] = tweet.estimation[res_idx] * 0.15
+            if tweet.estimation[res_idx] < tweet.estimation[positive_idx]:
                 res_idx = positive_idx
-            if estimation[res_idx] < estimation[negative_idx]:
+            if tweet.estimation[res_idx] < tweet.estimation[negative_idx]:
                 res_idx = negative_idx
             all_tweets_estimation[res_idx] += 1
-        size = len(self.tweet_to_estimation)
+        size = len(self.tweets)
         rule_res += "Good - {} - {}%\n".format(all_tweets_estimation[positive_idx],
                                                100 * all_tweets_estimation[positive_idx] / size)
         rule_res += "Bad - {} - {}%\n".format(all_tweets_estimation[negative_idx],
@@ -115,7 +115,6 @@ class TwitterAnalyzer:
             for word in tweet.normalized_words:
                 estimation_index = self.word_to_estimation.get(word, 0) + 1
                 estimations_counter[estimation_index] += 1
-            self.tweet_to_estimation[' '.join(tweet.normalized_words)] = estimations_counter
 
     def save_word_estimation(self):
         f = open(estimation_file_name, "w+")
